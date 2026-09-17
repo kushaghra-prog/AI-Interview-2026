@@ -67,7 +67,15 @@ const Dashboard = () => {
 
   const onChange = (e) => {
     const { name, value } = e.target;
-    setFormData((p) => ({ ...p, [name]: name === 'count' ? parseInt(value) : value }));
+    if (name === 'count') {
+      const parsedCount = value === '' ? '' : Number(value);
+      setFormData((p) => ({
+        ...p,
+        count: Number.isFinite(parsedCount) ? parsedCount : '',
+      }));
+      return;
+    }
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleStart = async (e) => {
@@ -258,7 +266,7 @@ const Dashboard = () => {
               </div>
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#94a3b8', marginBottom: '6px' }}>Questions (3–15)</label>
-                <input type="number" name="count" value={formData.count} onChange={onChange} min="3" max="15" required style={inputStyle}
+                <input type="number" name="count" value={Number.isFinite(formData.count) ? formData.count : ''} onChange={onChange} min="3" max="15" required style={inputStyle}
                   onFocus={(e) => e.target.style.borderColor = '#14b8a6'} onBlur={(e) => e.target.style.borderColor = '#2d3f56'}/>
               </div>
               <div style={{ display: 'flex', gap: '12px', paddingTop: '16px', borderTop: '1px solid #2d3f56' }}>
