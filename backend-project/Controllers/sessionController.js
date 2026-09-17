@@ -304,8 +304,8 @@ const evaluateAnswerAsync = async (
     question.userSubmittedcode = codeSubmission || "";
     question.idealAnswer = evalData.idealAnswer || question.idealAnswer;
     question.aiFeedback = evalData.aiFeedback || question.aiFeedback;
-    question.technicalScore = evalData.technicalScore || 0;
-    question.confidencescore = evalData.confidenceScore || 0;
+    question.technicalScore = Math.min(10, Math.max(0, evalData.technicalScore || 0));
+    question.confidencescore = Math.min(10, Math.max(0, evalData.confidenceScore || 0));
 
     const allQuestionsEvaluated = session.questions.every(q => q.isEvaluated);
 

@@ -77,11 +77,18 @@ async def root():
 async def generate_question(request: QuestionRequest):
     try:
         if request.interview_type in ("coding_mix", "coding-mixed"):
-            coding_count = int(request.count * 0.2)
-            oral_count = int(request.count) - int(coding_count)
+            coding_count = max(1, int(request.count * 0.4))
+            oral_count = int(request.count) - coding_count
             instructions = (
-                f"The First {coding_count} questions MUST be coding challenges requiring function implementation. "
-                f"The remaining {oral_count} questions MUST be oral questions requiring explanation of concepts."
+                f"The First {coding_count} questions MUST be coding challenges. "
+                f"The remaining {oral_count} questions MUST be oral/conceptual questions. "
+                "CODING QUESTION FORMAT (MUST follow exactly): "
+                "Write a function called <function_name> that <description>. "
+                "Include 2-3 test cases in this format within the question: "
+                "Example 1: Input: <input> -> Output: <output> | "
+                "Example 2: Input: <input> -> Output: <output> | "
+                "Include constraints if applicable. "
+                "Keep each coding question on ONE line."
             )
         else:
             instructions = "All questions MUST be conceptual oral questions. Do not generate any coding or implementation challenges."
@@ -175,23 +182,29 @@ async def evaluate_answer(request: EvaluationRequest):
         if request.question_type=="oral":
             assessment_instruction=(
             "This is a conceptual oral question. Focus purely on candidate's verbal explanation. "
-            "Ignore any code blocks."
+            "Ignore any code blocks. "
             "CRITICAL: If the transcript is empty, nonsense (e.g. 'blah blah', 'testing'), "
             "or irrelevant to the question, SCORE 0."
             )
         else: assessment_instruction=(
-            "This is a coding challenge question. Evaluate the code logic and efficiency. "
-            "Use the transcription only for insight into their thought process. "
-            "CRITICAL: If the code is undefined, empty, consists of just random comments, "
-            "or contains random characters, SCORE 0."
+            "This is a coding challenge question. "
+            "1. Check the code for syntax errors, logical errors, and runtime errors. "
+            "2. Mentally trace the code against the test cases in the question. "
+            "3. If the code produces WRONG output for any test case, mention which test case fails and what the wrong output would be. "
+            "4. Point out edge cases the code doesn't handle. "
+            "5. Evaluate code efficiency (time/space complexity). "
+            "6. In 'aiFeedback', clearly state: PASS or FAIL for each test case, what errors exist, and how to fix them. "
+            "CRITICAL: If the code is empty, undefined, or random characters, SCORE 0."
             )
         system_prompt = (
             "You are a strict technical interviewer. DO NOT hallucinate positive reviews for bad input. "
             "RULE 1: If the answer is gibberish, irrelevant, or missing, return 'technicalScore': 0 and 'confidenceScore': 0. "
-             "RULE 2: For 'idealAnswer', provide a clean Markdown string. DO NOT return a nested JSON object. "
+            "RULE 2: For 'idealAnswer', provide a complete correct solution with explanation. "
+            "RULE 3: Scores MUST be integers between 0 and 10 (inclusive). Never exceed 10. "
+            "RULE 4: In 'aiFeedback', be specific about errors. For coding: mention which test cases pass/fail, bugs found, and fixes needed. "
              f"Context: {assessment_instruction} "
             "Respond ONLY with JSON object. "
-             "Required Keys: 'technicalScore' (0-100), 'confidenceScore' (0-100), 'aiFeedback' (string), 'idealAnswer' (string)"
+             "Required Keys: 'technicalScore' (integer 0-10), 'confidenceScore' (integer 0-10), 'aiFeedback' (string), 'idealAnswer' (string)"
         )
         user_prompt=(
             f"Role:{request.role}\n"
