@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import FormData from "form-data";
 
-const AI_SERVICE_URL = "http://localhost:8000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
 const pushSocketUpdate = (io, userId, sessionId, message, status, session = null) => {
   if (!io) return;
