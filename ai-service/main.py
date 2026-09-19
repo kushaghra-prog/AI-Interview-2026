@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from typing import Optional
 
 import httpx
-from pydub import AudioSegment
+
 
 load_dotenv()
 
@@ -241,6 +241,9 @@ async def generate_question(request: QuestionRequest):
 async def transcribe_audio(file: UploadFile = File(...)):
     if not WHISPER_MODEL:
         raise HTTPException(status_code=503, detail="Whisper model is not loaded. Transcription is unavailable.")
+
+    
+    from pydub import AudioSegment
 
     temp_audio_path = None
     try:
