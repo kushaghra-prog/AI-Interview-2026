@@ -351,7 +351,7 @@ const evaluateAnswerAsync = async (
     }
     let audioFilePath=null;
     if(req.file){
-      audioFilePath=path.join(process.cwd(),req.file.path);
+      audioFilePath=path.resolve(req.file.path);
     }
     const codeSubmission = code || null;
 

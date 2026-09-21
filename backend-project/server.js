@@ -69,6 +69,9 @@ app.set("io", io);
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy", uptime: process.uptime() });
+});
 app.use('/api/users', userRoutes);
 app.use('/api/sessions', sessionRoutes);
 
@@ -93,5 +96,6 @@ server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-
- 
+// Prevent Render 502s: keep-alive must exceed Render's 60s proxy timeout
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 70000;
