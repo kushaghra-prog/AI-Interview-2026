@@ -8,6 +8,52 @@ import FormData from "form-data";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
+/**
+ * Fetch with retry for Render cold-start handling.
+ * Retries on 502/503/504, network errors, and timeouts.
+ */
+const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+  const RETRY_DELAY = 5000;
+  const TIMEOUT = 120000; // 2 min timeout per attempt
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      // Retry on Render cold-start status codes
+      if ([502, 503, 504].includes(response.status) && attempt < maxRetries) {
+        console.log(`AI service returned ${response.status}, retrying (${attempt + 1}/${maxRetries}) in ${RETRY_DELAY / 1000}s...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      const isRetryable =
+        error.name === "AbortError" ||
+        error.code === "ECONNREFUSED" ||
+        error.code === "ECONNRESET" ||
+        error.code === "ETIMEDOUT" ||
+        error.code === "ENOTFOUND" ||
+        error.type === "system";
+
+      if (isRetryable && attempt < maxRetries) {
+        console.log(`AI service request failed (${error.code || error.name}), retrying (${attempt + 1}/${maxRetries}) in ${RETRY_DELAY / 1000}s...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
 const pushSocketUpdate = (io, userId, sessionId, message, status, session = null) => {
   if (!io) return;
 
@@ -59,7 +105,7 @@ const createSession = asyncHandler(async (req, res) => {
         `Generating ${questionCount} question(s) for ${level} level ${role} role interview...`
       );
 
-      const aiResponse = await fetch(`${AI_SERVICE_URL}/generate-question`, {
+      const aiResponse = await fetchWithRetry(`${AI_SERVICE_URL}/generate-question`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -253,7 +299,7 @@ const evaluateAnswerAsync = async (
       const formData = new FormData();
       formData.append("file", fs.createReadStream(audioFilepath));
 
-      const transResponse = await fetch(`${AI_SERVICE_URL}/transcribe`, {
+      const transResponse = await fetchWithRetry(`${AI_SERVICE_URL}/transcribe`, {
         method: "POST",
         body: formData,
         headers: formData.getHeaders(),
@@ -282,7 +328,7 @@ const evaluateAnswerAsync = async (
   // Step 2: Evaluate answer (always runs)
   try {
     pushSocketUpdate(io, userId, sessionId, "AI_EVALUATION", `Evaluating answer for question ${questionIndex + 1}...`);
-    const evalResponse = await fetch(`${AI_SERVICE_URL}/evaluate`, {
+    const evalResponse = await fetchWithRetry(`${AI_SERVICE_URL}/evaluate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
