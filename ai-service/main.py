@@ -206,16 +206,29 @@ async def generate_question(request: QuestionRequest):
             import re
             lines = raw_text.strip().split("\n")
             cleaned = []
+            # Patterns that indicate a continuation of the previous question (test cases, examples, constraints)
+            continuation_pattern = re.compile(
+                r'^(?:Example|Input|Output|Constraint|Note|Test\s*Case|Expected|Sample|Edge\s*Case)',
+                re.IGNORECASE
+            )
             for line in lines:
                 line = line.strip()
                 if not line:
                     continue
                 # Remove numbering like "1.", "1)", "1:", "Q1.", "Q1:"
-                line = re.sub(r'^(?:Q?\d+[\.\)\:\-]\s*)', '', line).strip()
+                stripped = re.sub(r'^(?:Q?\d+[\.\)\:\-]\s*)', '', line).strip()
                 # Remove leading bullets/dashes
-                line = re.sub(r'^[\-\*\•]\s*', '', line).strip()
-                if len(line) > 10:  # skip very short fragments
-                    cleaned.append(line)
+                stripped = re.sub(r'^[\-\*\•]\s*', '', stripped).strip()
+                if len(stripped) <= 10:
+                    # Very short fragment — append to previous if exists
+                    if cleaned:
+                        cleaned[-1] += " " + stripped
+                    continue
+                # Check if this line is a continuation (example/test case/constraint)
+                if continuation_pattern.match(stripped) and cleaned:
+                    cleaned[-1] += "\n" + stripped
+                else:
+                    cleaned.append(stripped)
             return cleaned
 
         # First attempt

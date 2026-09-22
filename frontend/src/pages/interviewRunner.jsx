@@ -189,9 +189,53 @@ const InterviewRunner = () => {
           {isEvaluated && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '999px', background: '#064e3b', color: '#34d399', fontWeight: '600' }}>Evaluated</span>}
           {currentQuestion?.issubmitted && !isEvaluated && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '999px', background: '#78350f', color: '#fbbf24', fontWeight: '600' }}>Submitted</span>}
         </div>
-        <p style={{ fontSize: '18px', lineHeight: '1.7', color: '#f1f5f9', fontWeight: '400' }}>
-          {currentQuestionIndex + 1}. {currentQuestion?.questionText}
-        </p>
+        {(() => {
+          const text = currentQuestion?.questionText || '';
+          const parts = text.split('\n');
+          const mainQuestion = parts[0];
+          const details = parts.slice(1);
+          return (
+            <>
+              <p style={{ fontSize: '18px', lineHeight: '1.7', color: '#f1f5f9', fontWeight: '400', marginBottom: details.length ? '16px' : '0' }}>
+                {currentQuestionIndex + 1}. {mainQuestion}
+              </p>
+              {details.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {details.map((line, i) => {
+                    const isExample = /^Example/i.test(line.trim());
+                    const isConstraint = /^Constraint/i.test(line.trim());
+                    return (
+                      <div key={i} style={{
+                        padding: '10px 14px',
+                        background: '#0f172a',
+                        borderLeft: `3px solid ${isConstraint ? '#f59e0b' : '#3b82f6'}`,
+                        borderRadius: '0 8px 8px 0',
+                        fontFamily: isExample ? "'Consolas', 'Monaco', monospace" : 'inherit',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#94a3b8',
+                      }}>
+                        {isExample ? (
+                          line.trim().split(/\s*\|\s*/).map((part, j) => (
+                            <div key={j}>
+                              {part.split(/(Input:|Output:|Explanation:)/i).map((seg, k) =>
+                                /^(Input|Output|Explanation):/i.test(seg)
+                                  ? <span key={k} style={{ color: '#f1f5f9', fontWeight: '600' }}>{seg}</span>
+                                  : <span key={k}>{seg}</span>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <span>{line.trim()}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* ── Prev / Next ── */}
